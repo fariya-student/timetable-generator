@@ -204,7 +204,7 @@ async function saveFaculty() {
 }
 
 async function deleteFaculty(id) {
-    if (!confirm('Delete this faculty member?')) return;
+    if (!await showConfirm('Delete this faculty member?', 'Delete Faculty')) return;
     await DB.del('faculty', id);
     loadFaculty();
     showToast('Faculty deleted.', 'success');
@@ -275,7 +275,7 @@ async function saveSubject() {
 }
 
 async function deleteSubject(code) {
-    if (!confirm('Delete this subject?')) return;
+    if (!await showConfirm('Delete this subject?', 'Delete Subject')) return;
     await DB.del('subjects', code);
     loadSubjects();
     showToast('Subject deleted.', 'success');
@@ -351,7 +351,7 @@ async function saveRoom() {
 }
 
 async function deleteRoom(id) {
-    if (!confirm('Delete this room?')) return;
+    if (!await showConfirm('Delete this room?', 'Delete Room')) return;
     await DB.del('rooms', id);
     loadRooms();
     showToast('Room deleted.', 'success');
@@ -437,7 +437,7 @@ async function saveClass() {
 }
 
 async function deleteClass(id) {
-    if (!confirm('Delete this class?')) return;
+    if (!await showConfirm('Delete this class?', 'Delete Class')) return;
     await DB.del('classes', id);
     loadClasses();
     showToast('Class deleted.', 'success');
@@ -536,8 +536,10 @@ async function runGeneration() {
 
         _lastGenResult = result;
         document.getElementById('gen-status').innerHTML = result.valid
-            ? `<span class="badge badge-valid">✅ VALID — Score: ${result.softScore}/100</span>`
-            : `<span class="badge badge-invalid">⚠️ INVALID — ${result.conflicts.length} violation(s)</span>`;
+            ? (result.noResourceCount > 0
+                ? `<span class="badge badge-warn">⚠️ PARTIAL — ${result.noResourceCount} unplaced slot(s)</span>`
+                : `<span class="badge badge-valid">✅ VALID — Score: ${result.softScore}/100</span>`)
+            : `<span class="badge badge-invalid">❌ INVALID — ${result.hardViolationCount} hard violation(s)</span>`;
 
         renderTimetableResults(result);
         showToast('Timetable generated!', 'success');
@@ -583,13 +585,17 @@ function renderTimetableResults(gen) {
     // Summary
     const sumEl = document.getElementById('gen-summary');
     if (sumEl) {
+        const hardViolCnt = gen.hardViolationCount ?? conflicts.filter(c => c.type !== 'NO_RESOURCE').length;
+        const noResCnt = gen.noResourceCount ?? conflicts.filter(c => c.type === 'NO_RESOURCE').length;
+        const displayValid = gen.valid !== false && hardViolCnt === 0;
         sumEl.innerHTML = `
       <div class="summary-row"><span class="sr-label">Generation ID</span><span class="sr-value">${genId}</span></div>
-      <div class="summary-row"><span class="sr-label">Status</span><span class="sr-value ${valid ? 'text-success' : 'text-danger'}">${valid ? '✅ VALID' : '❌ INVALID'}</span></div>
+      <div class="summary-row"><span class="sr-label">Status</span><span class="sr-value ${displayValid ? 'text-success' : 'text-danger'}">${displayValid ? '✅ VALID' : '❌ INVALID'}</span></div>
+      <div class="summary-row"><span class="sr-label">Hard Violations</span><span class="sr-value ${hardViolCnt ? 'text-danger' : 'text-success'}">${hardViolCnt}</span></div>
+      <div class="summary-row"><span class="sr-label">Unplaced Slots</span><span class="sr-value ${noResCnt ? 'text-warning' : 'text-success'}">${noResCnt}${noResCnt > 0 ? ' ⚠️' : ''}</span></div>
       <div class="summary-row"><span class="sr-label">Soft Score</span><span class="sr-value">${softScore}/100 ${scoreEmoji(softScore)}</span></div>
       <div class="summary-row"><span class="sr-label">Execution Time</span><span class="sr-value">${execTime}ms</span></div>
       <div class="summary-row"><span class="sr-label">Total Slots Placed</span><span class="sr-value">${slots.length}</span></div>
-      <div class="summary-row"><span class="sr-label">Hard Violations</span><span class="sr-value ${conflicts.length ? 'text-danger' : 'text-success'}">${conflicts.length}</span></div>
       <div class="summary-row"><span class="sr-label">Generated At</span><span class="sr-value">${new Date().toLocaleString()}</span></div>
     `;
     }
@@ -891,26 +897,49 @@ async function renderHeatmap(slots, gen) {
     container.innerHTML = html;
 }
 
-// ─── Conflict Report ────────────────────────────────────────────
 function renderConflicts(gen) {
     const container = document.getElementById('tab-conflict-panel');
     if (!container) return;
-    const conflicts = gen.conflicts || [];
-    if (conflicts.length === 0) {
-        container.innerHTML = `<div class="alert alert-success">✅ No hard constraint violations found. Timetable is VALID.</div>`;
+    const allConflicts = gen.conflicts || [];
+    const hardViolations = allConflicts.filter(c => c.type !== 'NO_RESOURCE');
+    const unplacedSlots = allConflicts.filter(c => c.type === 'NO_RESOURCE');
+
+    if (allConflicts.length === 0) {
+        container.innerHTML = `<div class="alert alert-success">✅ No violations or unplaced slots. Timetable is fully VALID.</div>`;
         return;
     }
-    let html = `<div class="alert alert-danger">❌ ${conflicts.length} violation(s) found. Timetable is INVALID.</div>`;
-    conflicts.forEach(c => {
-        html += `<div class="conflict-item">
-      <span class="ci-icon">⚠️</span>
+
+    let html = '';
+    if (hardViolations.length > 0) {
+        html += `<div class="alert alert-danger">❌ ${hardViolations.length} hard constraint violation(s) found. Timetable is INVALID.</div>`;
+        hardViolations.forEach(c => {
+            html += `<div class="conflict-item">
+      <span class="ci-icon">❌</span>
       <div class="ci-text">
         <strong>${c.type.replace(/_/g, ' ')}</strong>
         <span>${c.desc}</span>
         ${c.class ? `<br><span>Class: ${c.class}${c.subject ? ' | Subject: ' + c.subject : ''}</span>` : ''}
       </div>
     </div>`;
-    });
+        });
+    } else {
+        html += `<div class="alert alert-success">✅ No hard constraint violations. Timetable is VALID.</div>`;
+    }
+
+    if (unplacedSlots.length > 0) {
+        html += `<div class="alert alert-warning" style="margin-top:12px">⚠️ ${unplacedSlots.length} slot(s) could not be placed (no available faculty/room). These are warnings, not hard violations.</div>`;
+        unplacedSlots.forEach(c => {
+            html += `<div class="conflict-item" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.25)">
+      <span class="ci-icon" style="color:var(--warning)">⚠️</span>
+      <div class="ci-text">
+        <strong style="color:var(--warning)">${c.type.replace(/_/g, ' ')}</strong>
+        <span>${c.desc}</span>
+        ${c.class ? `<br><span>Class: ${c.class}${c.subject ? ' | Subject: ' + c.subject : ''}</span>` : ''}
+      </div>
+    </div>`;
+        });
+    }
+
     container.innerHTML = html;
 }
 
@@ -937,10 +966,11 @@ async function loadLogs() {
       <td>${l.execTimeMs}ms</td>
       <td>${l.softScore}/100</td>
       <td>${l.totalSlots}</td>
-      <td>${l.conflicts}</td>
-      <td><span class="badge ${l.valid ? 'badge-valid' : 'badge-invalid'}">${l.status}</span></td>
+      <td>${l.conflicts ?? 0}</td>
+      <td>${l.unplaced != null ? `<span class="${l.unplaced > 0 ? 'text-warning' : 'text-success'}">${l.unplaced}</span>` : '—'}</td>
+      <td><span class="badge ${l.valid ? (l.status === 'PARTIAL' ? 'badge-warn' : 'badge-valid') : 'badge-invalid'}">${l.status || (l.valid ? 'VALID' : 'INVALID')}</span></td>
       <td><button class="btn btn-secondary btn-sm" onclick="restoreGen('${l.id}')">👁 View</button></td>
-    </tr>`).join('') || '<tr><td colspan="8" class="empty-msg">No generation logs yet</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="9" class="empty-msg">No generation logs yet</td></tr>';
 }
 
 async function restoreGen(genId) {
@@ -953,7 +983,7 @@ async function restoreGen(genId) {
 }
 
 async function clearLogs() {
-    if (!confirm('Clear all generation logs? This cannot be undone.')) return;
+    if (!await showConfirm('Clear all generation logs? This cannot be undone.', 'Clear Logs')) return;
     await DB.clear('genLog');
     await DB.clear('timetable');
     _lastGenResult = null;
@@ -1002,6 +1032,23 @@ function openModal(id) {
 function closeModal(id) {
     const m = document.getElementById(id);
     if (m) m.classList.remove('open');
+}
+
+// Custom confirm dialog (replaces native window.confirm)
+function showConfirm(message, title = 'Confirm') {
+    return new Promise(resolve => {
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-message').textContent = message;
+        document.getElementById('confirm-ok-btn').onclick = () => {
+            closeModal('confirm-modal');
+            resolve(true);
+        };
+        document.getElementById('confirm-cancel-btn').onclick = () => {
+            closeModal('confirm-modal');
+            resolve(false);
+        };
+        openModal('confirm-modal');
+    });
 }
 
 function showToast(msg, type = 'success') {
@@ -1059,7 +1106,7 @@ function readAndParse(file, parser) {
 // DEMO DATA SEEDER
 // ──────────────────────────────────────────────────────────────────
 async function seedDemoData() {
-    if (!confirm('This will add sample faculty, subjects, rooms and classes. Continue?')) return;
+    if (!await showConfirm('This will add sample faculty, subjects, rooms and classes. Continue?', 'Load Demo Data')) return;
 
     // Subjects
     const subjects = [
@@ -1100,9 +1147,9 @@ async function seedDemoData() {
         { id: 'R101', name: 'Room 101', type: 'Theory', capacity: 60 },
         { id: 'R102', name: 'Room 102', type: 'Theory', capacity: 60 },
         { id: 'R103', name: 'Room 103', type: 'Theory', capacity: 60 },
-        { id: 'L101', name: 'CS Lab 1', type: 'Lab', capacity: 40 },
-        { id: 'L102', name: 'CS Lab 2', type: 'Lab', capacity: 40 },
-        { id: 'L103', name: 'Physics Lab', type: 'Lab', capacity: 30 },
+        { id: 'L101', name: 'CS Lab 1', type: 'Lab', capacity: 60 },
+        { id: 'L102', name: 'CS Lab 2', type: 'Lab', capacity: 60 },
+        { id: 'L103', name: 'Physics Lab', type: 'Lab', capacity: 60 },
     ];
     for (const r of rooms) await DB.put('rooms', r);
 

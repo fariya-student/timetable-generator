@@ -1,764 +1,916 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AutoTimetable — Automated Timetable Generator</title>
-  <meta name="description" content="Production-grade automated timetable generator for academic institutions with constraint programming, zero hard-constraint violations, and rich UI/UX." />
+  <meta name="description"
+    content="Production-grade automated timetable generator for academic institutions with constraint programming, zero hard-constraint violations, and rich UI/UX." />
   <link rel="stylesheet" href="css/style.css" />
   <!-- jsPDF for PDF export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     /* Toast */
     .toast {
-      position:fixed; bottom:24px; right:24px; z-index:9999;
-      background:var(--bg-secondary); border:1px solid var(--border);
-      border-radius:var(--radius-sm); padding:12px 20px;
-      font-size:14px; font-weight:500; color:var(--text-primary);
-      box-shadow:var(--shadow); opacity:0; transform:translateY(16px);
-      transition:all 0.3s ease; pointer-events:none; max-width:340px;
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(16px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+      max-width: 340px;
     }
-    .toast.show { opacity:1; transform:translateY(0); pointer-events:auto; }
-    .toast-success { border-left:3px solid var(--success); }
-    .toast-warning { border-left:3px solid var(--warning); }
-    .toast-danger  { border-left:3px solid var(--danger); }
-    .toast-info    { border-left:3px solid var(--accent3); }
-    .empty-msg { text-align:center; padding:20px; color:var(--text-muted); font-size:13px; }
-    .gen-btn-wrap { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-    #results-section { display:none; }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .toast-success {
+      border-left: 3px solid var(--success);
+    }
+
+    .toast-warning {
+      border-left: 3px solid var(--warning);
+    }
+
+    .toast-danger {
+      border-left: 3px solid var(--danger);
+    }
+
+    .toast-info {
+      border-left: 3px solid var(--accent3);
+    }
+
+    .empty-msg {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .gen-btn-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    #results-section {
+      display: none;
+    }
   </style>
 </head>
+
 <body>
 
-<!-- ═══════════════════════════════════════════════ SIDEBAR ═══ -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-icon">🗓️</div>
-    <h2>AutoTimetable</h2>
-    <p>Academic Scheduler v1.0</p>
-  </div>
-
-  <nav class="sidebar-nav">
-    <div class="nav-section-label">Overview</div>
-    <div class="nav-item" data-page="dashboard" data-label="Dashboard">
-      <span class="nav-icon">📊</span> Dashboard
+  <!-- ═══════════════════════════════════════════════ SIDEBAR ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🗓️</div>
+      <h2>AutoTimetable</h2>
+      <p>Academic Scheduler v1.0</p>
     </div>
 
-    <div class="nav-section-label" style="margin-top:8px">Data Input</div>
-    <div class="nav-item" data-page="faculty" data-label="Faculty">
-      <span class="nav-icon">👩‍🏫</span> Faculty
-      <span class="nav-badge" id="faculty-count-badge">0</span>
-    </div>
-    <div class="nav-item" data-page="subjects" data-label="Subjects">
-      <span class="nav-icon">📚</span> Subjects
-      <span class="nav-badge" id="subjects-count-badge">0</span>
-    </div>
-    <div class="nav-item" data-page="rooms" data-label="Rooms">
-      <span class="nav-icon">🏛️</span> Rooms
-      <span class="nav-badge" id="rooms-count-badge">0</span>
-    </div>
-    <div class="nav-item" data-page="classes" data-label="Classes">
-      <span class="nav-icon">🎓</span> Classes
-      <span class="nav-badge" id="classes-count-badge">0</span>
-    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <div class="nav-item" data-page="dashboard" data-label="Dashboard">
+        <span class="nav-icon">📊</span> Dashboard
+      </div>
 
-    <div class="nav-section-label" style="margin-top:8px">Schedule</div>
-    <div class="nav-item" data-page="settings" data-label="Settings">
-      <span class="nav-icon">⚙️</span> Settings
-    </div>
-    <div class="nav-item" data-page="generate" data-label="Generate Timetable">
-      <span class="nav-icon">⚡</span> Generate
-    </div>
-    <div class="nav-item" data-page="logs" data-label="Generation Logs">
-      <span class="nav-icon">📋</span> Logs
-    </div>
-  </nav>
+      <div class="nav-section-label" style="margin-top:8px">Data Input</div>
+      <div class="nav-item" data-page="faculty" data-label="Faculty">
+        <span class="nav-icon">👩‍🏫</span> Faculty
+        <span class="nav-badge" id="faculty-count-badge">0</span>
+      </div>
+      <div class="nav-item" data-page="subjects" data-label="Subjects">
+        <span class="nav-icon">📚</span> Subjects
+        <span class="nav-badge" id="subjects-count-badge">0</span>
+      </div>
+      <div class="nav-item" data-page="rooms" data-label="Rooms">
+        <span class="nav-icon">🏛️</span> Rooms
+        <span class="nav-badge" id="rooms-count-badge">0</span>
+      </div>
+      <div class="nav-item" data-page="classes" data-label="Classes">
+        <span class="nav-icon">🎓</span> Classes
+        <span class="nav-badge" id="classes-count-badge">0</span>
+      </div>
 
-  <div class="sidebar-footer">
-    <button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()">
-      <span>☀️</span> Light Mode
-    </button>
-  </div>
-</aside>
+      <div class="nav-section-label" style="margin-top:8px">Schedule</div>
+      <div class="nav-item" data-page="settings" data-label="Settings">
+        <span class="nav-icon">⚙️</span> Settings
+      </div>
+      <div class="nav-item" data-page="generate" data-label="Generate Timetable">
+        <span class="nav-icon">⚡</span> Generate
+      </div>
+      <div class="nav-item" data-page="logs" data-label="Generation Logs">
+        <span class="nav-icon">📋</span> Logs
+      </div>
+    </nav>
 
-<!-- ════════════════════════════════════════════ MAIN CONTENT ═══ -->
-<main class="main-content">
-
-  <!-- TOP BAR -->
-  <header class="topbar">
-    <h1>Dashboard</h1>
-    <div class="topbar-actions">
-      <button class="btn btn-warning btn-sm" onclick="seedDemoData()" title="Load sample data for testing">
-        🧪 Load Demo Data
+    <div class="sidebar-footer">
+      <button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()">
+        <span>☀️</span> Light Mode
       </button>
     </div>
-  </header>
+  </aside>
 
-  <!-- ───────────────────── DASHBOARD ───────────────────── -->
-  <section class="page active" id="page-dashboard">
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon indigo">👩‍🏫</div>
-        <div class="stat-info">
-          <div class="label">Faculty</div>
-          <div class="value" id="stat-faculty">0</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon purple">📚</div>
-        <div class="stat-info">
-          <div class="label">Subjects</div>
-          <div class="value" id="stat-subjects">0</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon cyan">🏛️</div>
-        <div class="stat-info">
-          <div class="label">Rooms</div>
-          <div class="value" id="stat-rooms">0</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon green">🎓</div>
-        <div class="stat-info">
-          <div class="label">Classes</div>
-          <div class="value" id="stat-classes">0</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon amber">⚡</div>
-        <div class="stat-info">
-          <div class="label">Generations</div>
-          <div class="value" id="stat-gens">0</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon red">🏆</div>
-        <div class="stat-info">
-          <div class="label">Best Score</div>
-          <div class="value" id="stat-score">—</div>
-        </div>
-      </div>
-    </div>
+  <!-- ════════════════════════════════════════════ MAIN CONTENT ═══ -->
+  <main class="main-content">
 
-    <div class="card">
-      <div class="card-header">
-        <h3>Recent Generations</h3>
-        <button class="btn btn-secondary btn-sm" onclick="navigate('logs')">View All</button>
-      </div>
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead><tr>
-            <th>ID</th><th>Timestamp</th><th>Time</th><th>Score</th><th>Slots</th><th>Status</th>
-          </tr></thead>
-          <tbody id="recent-gens-tbody">
-            <tr><td colspan="6" class="empty-msg">No generations yet. Click "Load Demo Data" to get started!</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card mt-16" style="background:linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.08));border-color:rgba(99,102,241,0.2)">
-      <div class="card-header">
-        <h3>🚀 Quick Start Guide</h3>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
-        <div style="padding:12px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border)">
-          <div style="font-size:24px;margin-bottom:6px">1️⃣</div>
-          <div style="font-weight:600;font-size:13px">Add Faculty</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Set availability matrix per day/period</div>
-        </div>
-        <div style="padding:12px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border)">
-          <div style="font-size:24px;margin-bottom:6px">2️⃣</div>
-          <div style="font-weight:600;font-size:13px">Add Subjects</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Mark Lab vs Theory + weekly hours</div>
-        </div>
-        <div style="padding:12px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border)">
-          <div style="font-size:24px;margin-bottom:6px">3️⃣</div>
-          <div style="font-weight:600;font-size:13px">Add Rooms</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Set capacity and type (Lab/Theory)</div>
-        </div>
-        <div style="padding:12px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border)">
-          <div style="font-size:24px;margin-bottom:6px">4️⃣</div>
-          <div style="font-weight:600;font-size:13px">Add Classes</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Assign subjects to each class section</div>
-        </div>
-        <div style="padding:12px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border)">
-          <div style="font-size:24px;margin-bottom:6px">5️⃣</div>
-          <div style="font-weight:600;font-size:13px">Configure Settings</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Set working days, periods, breaks</div>
-        </div>
-        <div style="padding:12px;background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1));border-radius:8px;border:1px solid rgba(99,102,241,0.3)">
-          <div style="font-size:24px;margin-bottom:6px">⚡</div>
-          <div style="font-weight:600;font-size:13px;color:var(--accent)">Generate!</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Click Generate and watch it run</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ───────────────────── FACULTY ─────────────────────── -->
-  <section class="page" id="page-faculty">
-    <div class="flex items-center justify-between mb-20">
-      <div class="flex items-center gap-12">
-        <h2 style="font-size:20px;font-weight:700">Faculty Management</h2>
-        <span class="badge badge-theory" id="faculty-total-badge">0 faculty</span>
-      </div>
-      <div class="flex gap-8">
-        <button class="btn btn-secondary" onclick="openModal('faculty-csv-modal')">📥 Import CSV</button>
-        <button class="btn btn-primary" id="add-faculty-btn"
-          onclick="document.getElementById('fm-id').value='';document.getElementById('fm-name').value='';document.getElementById('fm-subs').value='';document.getElementById('fm-edit-id').value='';document.getElementById('faculty-modal-title').textContent='Add Faculty';buildAvailMatrix('fm-avail',Array.from({length:6},()=>Array(8).fill(true)));openModal('faculty-modal')">
-          ➕ Add Faculty
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <h1>Dashboard</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-warning btn-sm" onclick="seedDemoData()" title="Load sample data for testing">
+          🧪 Load Demo Data
         </button>
       </div>
-    </div>
+    </header>
 
-    <!-- CSV format hint -->
-    <div class="alert alert-info mb-16">
-      <span>ℹ️</span>
-      <span><strong>CSV Format:</strong> ID, Name, Subjects (semicolon-separated) | Example: <code>F001,Dr. Smith,CS101;CS102</code></span>
-    </div>
+    <!-- ───────────────────── DASHBOARD ───────────────────── -->
+    <section class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon indigo">👩‍🏫</div>
+          <div class="stat-info">
+            <div class="label">Faculty</div>
+            <div class="value" id="stat-faculty">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple">📚</div>
+          <div class="stat-info">
+            <div class="label">Subjects</div>
+            <div class="value" id="stat-subjects">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon cyan">🏛️</div>
+          <div class="stat-info">
+            <div class="label">Rooms</div>
+            <div class="value" id="stat-rooms">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">🎓</div>
+          <div class="stat-info">
+            <div class="label">Classes</div>
+            <div class="value" id="stat-classes">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon amber">⚡</div>
+          <div class="stat-info">
+            <div class="label">Generations</div>
+            <div class="value" id="stat-gens">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon red">🏆</div>
+          <div class="stat-info">
+            <div class="label">Best Score</div>
+            <div class="value" id="stat-score">—</div>
+          </div>
+        </div>
+      </div>
 
-    <div class="card">
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead><tr><th>ID</th><th>Name</th><th>Subjects</th><th>Load</th><th>Actions</th></tr></thead>
-          <tbody id="faculty-tbody">
-            <tr><td colspan="5" class="empty-msg">No faculty added yet</td></tr>
-          </tbody>
-        </table>
+      <div class="card">
+        <div class="card-header">
+          <h3>Recent Generations</h3>
+          <button class="btn btn-secondary btn-sm" onclick="navigate('logs')">View All</button>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Timestamp</th>
+                <th>Time</th>
+                <th>Score</th>
+                <th>Slots</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="recent-gens-tbody">
+              <tr>
+                <td colspan="6" class="empty-msg">No generations yet. Click "Load Demo Data" to get started!</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  </section>
 
-  <!-- ───────────────────── SUBJECTS ────────────────────── -->
-  <section class="page" id="page-subjects">
-    <div class="flex items-center justify-between mb-20">
-      <div class="flex items-center gap-12">
-        <h2 style="font-size:20px;font-weight:700">Subjects Management</h2>
+      <div class="card mt-16"
+        style="background:linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.08));border-color:rgba(99,102,241,0.2)">
+        <div class="card-header">
+          <h3>🚀 Quick Start Guide</h3>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+          <div style="padding:12px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border)">
+            <div style="font-size:24px;margin-bottom:6px">1️⃣</div>
+            <div style="font-weight:600;font-size:13px">Add Faculty</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Set availability matrix per day/period
+            </div>
+          </div>
+          <div style="padding:12px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border)">
+            <div style="font-size:24px;margin-bottom:6px">2️⃣</div>
+            <div style="font-weight:600;font-size:13px">Add Subjects</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Mark Lab vs Theory + weekly hours</div>
+          </div>
+          <div style="padding:12px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border)">
+            <div style="font-size:24px;margin-bottom:6px">3️⃣</div>
+            <div style="font-weight:600;font-size:13px">Add Rooms</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Set capacity and type (Lab/Theory)</div>
+          </div>
+          <div style="padding:12px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border)">
+            <div style="font-size:24px;margin-bottom:6px">4️⃣</div>
+            <div style="font-weight:600;font-size:13px">Add Classes</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Assign subjects to each class section
+            </div>
+          </div>
+          <div style="padding:12px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border)">
+            <div style="font-size:24px;margin-bottom:6px">5️⃣</div>
+            <div style="font-weight:600;font-size:13px">Configure Settings</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Set working days, periods, breaks</div>
+          </div>
+          <div
+            style="padding:12px;background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1));border-radius:8px;border:1px solid rgba(99,102,241,0.3)">
+            <div style="font-size:24px;margin-bottom:6px">⚡</div>
+            <div style="font-weight:600;font-size:13px;color:var(--accent)">Generate!</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Click Generate and watch it run</div>
+          </div>
+        </div>
       </div>
-      <div class="flex gap-8">
-        <button class="btn btn-secondary" onclick="openModal('subjects-csv-modal')">📥 Import CSV</button>
-        <button class="btn btn-primary"
-          onclick="document.getElementById('subject-modal-title').textContent='Add Subject';document.getElementById('sm-code').value='';document.getElementById('sm-name').value='';document.getElementById('sm-hours').value=3;document.getElementById('sm-edit-code').value='';openModal('subject-modal')">
-          ➕ Add Subject
-        </button>
-      </div>
-    </div>
-    <div class="alert alert-info mb-16">
-      <span>ℹ️</span>
-      <span><strong>CSV Format:</strong> Code, Name, Type (Lab/Theory), WeeklyHours | Example: <code>CS101,Data Structures,Theory,4</code></span>
-    </div>
-    <div class="card">
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Weekly Hours</th><th>Actions</th></tr></thead>
-          <tbody id="subjects-tbody">
-            <tr><td colspan="5" class="empty-msg">No subjects added yet</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ───────────────────── ROOMS ───────────────────────── -->
-  <section class="page" id="page-rooms">
-    <div class="flex items-center justify-between mb-20">
-      <div class="flex items-center gap-12">
-        <h2 style="font-size:20px;font-weight:700">Rooms Management</h2>
+    <!-- ───────────────────── FACULTY ─────────────────────── -->
+    <section class="page" id="page-faculty">
+      <div class="flex items-center justify-between mb-20">
+        <div class="flex items-center gap-12">
+          <h2 style="font-size:20px;font-weight:700">Faculty Management</h2>
+          <span class="badge badge-theory" id="faculty-total-badge">0 faculty</span>
+        </div>
+        <div class="flex gap-8">
+          <button class="btn btn-secondary" onclick="openModal('faculty-csv-modal')">📥 Import CSV</button>
+          <button class="btn btn-primary" id="add-faculty-btn"
+            onclick="document.getElementById('fm-id').value='';document.getElementById('fm-name').value='';document.getElementById('fm-subs').value='';document.getElementById('fm-edit-id').value='';document.getElementById('faculty-modal-title').textContent='Add Faculty';buildAvailMatrix('fm-avail',Array.from({length:6},()=>Array(8).fill(true)));openModal('faculty-modal')">
+            ➕ Add Faculty
+          </button>
+        </div>
       </div>
-      <div class="flex gap-8">
-        <button class="btn btn-secondary" onclick="openModal('rooms-csv-modal')">📥 Import CSV</button>
-        <button class="btn btn-primary"
-          onclick="document.getElementById('room-modal-title').textContent='Add Room';document.getElementById('rm-id').value='';document.getElementById('rm-name').value='';document.getElementById('rm-cap').value=60;document.getElementById('rm-edit-id').value='';openModal('room-modal')">
-          ➕ Add Room
-        </button>
-      </div>
-    </div>
-    <div class="alert alert-info mb-16">
-      <span>ℹ️</span>
-      <span><strong>CSV Format:</strong> ID, Name, Type (Lab/Theory), Capacity | Example: <code>R101,Room 101,Theory,60</code></span>
-    </div>
-    <div class="card">
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Capacity</th><th>Actions</th></tr></thead>
-          <tbody id="rooms-tbody">
-            <tr><td colspan="5" class="empty-msg">No rooms added yet</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
 
-  <!-- ───────────────────── CLASSES ─────────────────────── -->
-  <section class="page" id="page-classes">
-    <div class="flex items-center justify-between mb-20">
-      <div class="flex items-center gap-12">
-        <h2 style="font-size:20px;font-weight:700">Classes Management</h2>
+      <!-- CSV format hint -->
+      <div class="alert alert-info mb-16">
+        <span>ℹ️</span>
+        <span><strong>CSV Format:</strong> ID, Name, Subjects (semicolon-separated) | Example:
+          <code>F001,Dr. Smith,CS101;CS102</code></span>
       </div>
-      <div class="flex gap-8">
-        <button class="btn btn-secondary" onclick="openModal('classes-csv-modal')">📥 Import CSV</button>
-        <button class="btn btn-primary"
-          onclick="document.getElementById('class-modal-title').textContent='Add Class';document.getElementById('cm-id').value='';document.getElementById('cm-section').value='';document.getElementById('cm-strength').value=50;document.getElementById('cm-edit-id').value='';populateSubjectCheckboxes([]);openModal('class-modal')">
-          ➕ Add Class
-        </button>
-      </div>
-    </div>
-    <div class="alert alert-info mb-16">
-      <span>ℹ️</span>
-      <span><strong>CSV Format:</strong> ID, Section, Strength, Subjects (semicolon-separated) | Example: <code>CLS_A,CS-A,55,CS101;CSL101</code></span>
-    </div>
-    <div class="card">
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead><tr><th>ID</th><th>Section</th><th>Strength</th><th>Subjects</th><th>Actions</th></tr></thead>
-          <tbody id="classes-tbody">
-            <tr><td colspan="5" class="empty-msg">No classes added yet</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
 
-  <!-- ───────────────────── SETTINGS ────────────────────── -->
-  <section class="page" id="page-settings">
-    <h2 style="font-size:20px;font-weight:700;margin-bottom:20px">Schedule Configuration</h2>
-    <div class="card" style="max-width:600px">
-      <div class="card-header"><h3>⚙️ Timetable Settings</h3></div>
+      <div class="card">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Subjects</th>
+                <th>Load</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="faculty-tbody">
+              <tr>
+                <td colspan="5" class="empty-msg">No faculty added yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────── SUBJECTS ────────────────────── -->
+    <section class="page" id="page-subjects">
+      <div class="flex items-center justify-between mb-20">
+        <div class="flex items-center gap-12">
+          <h2 style="font-size:20px;font-weight:700">Subjects Management</h2>
+        </div>
+        <div class="flex gap-8">
+          <button class="btn btn-secondary" onclick="openModal('subjects-csv-modal')">📥 Import CSV</button>
+          <button class="btn btn-primary"
+            onclick="document.getElementById('subject-modal-title').textContent='Add Subject';document.getElementById('sm-code').value='';document.getElementById('sm-name').value='';document.getElementById('sm-hours').value=3;document.getElementById('sm-edit-code').value='';openModal('subject-modal')">
+            ➕ Add Subject
+          </button>
+        </div>
+      </div>
+      <div class="alert alert-info mb-16">
+        <span>ℹ️</span>
+        <span><strong>CSV Format:</strong> Code, Name, Type (Lab/Theory), WeeklyHours | Example:
+          <code>CS101,Data Structures,Theory,4</code></span>
+      </div>
+      <div class="card">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Weekly Hours</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="subjects-tbody">
+              <tr>
+                <td colspan="5" class="empty-msg">No subjects added yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────── ROOMS ───────────────────────── -->
+    <section class="page" id="page-rooms">
+      <div class="flex items-center justify-between mb-20">
+        <div class="flex items-center gap-12">
+          <h2 style="font-size:20px;font-weight:700">Rooms Management</h2>
+        </div>
+        <div class="flex gap-8">
+          <button class="btn btn-secondary" onclick="openModal('rooms-csv-modal')">📥 Import CSV</button>
+          <button class="btn btn-primary"
+            onclick="document.getElementById('room-modal-title').textContent='Add Room';document.getElementById('rm-id').value='';document.getElementById('rm-name').value='';document.getElementById('rm-cap').value=60;document.getElementById('rm-edit-id').value='';openModal('room-modal')">
+            ➕ Add Room
+          </button>
+        </div>
+      </div>
+      <div class="alert alert-info mb-16">
+        <span>ℹ️</span>
+        <span><strong>CSV Format:</strong> ID, Name, Type (Lab/Theory), Capacity | Example:
+          <code>R101,Room 101,Theory,60</code></span>
+      </div>
+      <div class="card">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Capacity</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rooms-tbody">
+              <tr>
+                <td colspan="5" class="empty-msg">No rooms added yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────── CLASSES ─────────────────────── -->
+    <section class="page" id="page-classes">
+      <div class="flex items-center justify-between mb-20">
+        <div class="flex items-center gap-12">
+          <h2 style="font-size:20px;font-weight:700">Classes Management</h2>
+        </div>
+        <div class="flex gap-8">
+          <button class="btn btn-secondary" onclick="openModal('classes-csv-modal')">📥 Import CSV</button>
+          <button class="btn btn-primary"
+            onclick="document.getElementById('class-modal-title').textContent='Add Class';document.getElementById('cm-id').value='';document.getElementById('cm-section').value='';document.getElementById('cm-strength').value=50;document.getElementById('cm-edit-id').value='';populateSubjectCheckboxes([]);openModal('class-modal')">
+            ➕ Add Class
+          </button>
+        </div>
+      </div>
+      <div class="alert alert-info mb-16">
+        <span>ℹ️</span>
+        <span><strong>CSV Format:</strong> ID, Section, Strength, Subjects (semicolon-separated) | Example:
+          <code>CLS_A,CS-A,55,CS101;CSL101</code></span>
+      </div>
+      <div class="card">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Section</th>
+                <th>Strength</th>
+                <th>Subjects</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="classes-tbody">
+              <tr>
+                <td colspan="5" class="empty-msg">No classes added yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────── SETTINGS ────────────────────── -->
+    <section class="page" id="page-settings">
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:20px">Schedule Configuration</h2>
+      <div class="card" style="max-width:600px">
+        <div class="card-header">
+          <h3>⚙️ Timetable Settings</h3>
+        </div>
+        <div class="form-grid">
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label>Working Days per Week</label>
+              <select class="form-control" id="set-workingDays">
+                <option value="5">5 days (Mon–Fri)</option>
+                <option value="6">6 days (Mon–Sat)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Periods per Day</label>
+              <select class="form-control" id="set-periodsPerDay">
+                <option value="7">7 periods</option>
+                <option value="8">8 periods</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label>Period Duration (minutes)</label>
+              <select class="form-control" id="set-periodDuration">
+                <option value="45">45 min</option>
+                <option value="50">50 min</option>
+                <option value="60">60 min</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Lab Consecutive Periods</label>
+              <select class="form-control" id="set-labConsecutive">
+                <option value="2">2 periods</option>
+                <option value="3">3 periods</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label>Break After Period #</label>
+              <select class="form-control" id="set-breakAfter">
+                <option value="0">No break</option>
+                <option value="2">After Period 2</option>
+                <option value="3">After Period 3</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Lunch After Period #</label>
+              <select class="form-control" id="set-lunchAfter">
+                <option value="0">No lunch</option>
+                <option value="4">After Period 4</option>
+                <option value="5">After Period 5</option>
+              </select>
+            </div>
+          </div>
+
+          <div
+            style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:12px;font-size:12px;color:var(--text-secondary)">
+            <strong style="color:var(--accent)">📌 Note:</strong> Break and Lunch slots are excluded from teaching
+            periods.
+            Labs require consecutive available periods (not split by breaks).
+          </div>
+
+          <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────── GENERATE ────────────────────── -->
+    <section class="page" id="page-generate">
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:20px">⚡ Generate Timetable</h2>
+
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start" class="gen-layout">
+        <!-- Left: controls + log -->
+        <div>
+          <div class="card mb-16">
+            <div class="card-header">
+              <h3>⚙️ Generation Controls</h3>
+            </div>
+            <div class="gen-btn-wrap">
+              <button class="btn btn-primary" id="gen-btn" onclick="runGeneration()">
+                ⚡ Generate Timetable
+              </button>
+              <div id="gen-status"><span class="badge" style="background:var(--bg-card);color:var(--text-muted)">— Ready
+                  —</span></div>
+            </div>
+            <div class="progress-wrap mt-16">
+              <div class="progress-label">
+                <span>Generation Progress</span>
+                <span id="progress-pct">0%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="generation-log mt-12" id="gen-log">
+              <div class="log-line"><span class="log-time">[system]</span><span class="log-info">Ready to generate.
+                  Click the button above to start.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: summary -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <h3>📊 Generation Summary</h3>
+            </div>
+            <div id="gen-summary" style="color:var(--text-muted);font-size:13px">
+              Run a generation to see results here.
+            </div>
+          </div>
+
+          <div class="card mt-16">
+            <div class="card-header">
+              <h3>📥 Export</h3>
+            </div>
+            <div class="flex gap-8" style="flex-direction:column">
+              <button class="btn btn-success" onclick="exportTimetableCSV()">📄 Download CSV</button>
+              <button class="btn btn-secondary" onclick="exportTimetablePDF()">📑 Download PDF</button>
+            </div>
+          </div>
+
+          <div class="card mt-16" style="background:rgba(99,102,241,0.06);border-color:rgba(99,102,241,0.2)">
+            <div class="card-header">
+              <h3>🧠 Algorithm Info</h3>
+            </div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.8">
+              <div>• <strong>Method:</strong> Backtracking + MRV heuristics</div>
+              <div>• <strong>Order:</strong> Labs → High-hours → Theory</div>
+              <div>• <strong>Constraint Propagation:</strong> Forward checking</div>
+              <div>• <strong>Hard Constraints:</strong> Zero violation enforced</div>
+              <div>• <strong>Soft Scoring:</strong> 0–100 quality metric</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results section -->
+      <div id="results-section" style="margin-top:24px">
+        <hr class="section-divider" />
+        <h3 style="font-size:16px;font-weight:700;margin-bottom:16px">📅 Timetable Results</h3>
+
+        <!-- Tabs -->
+        <div class="tab-bar" style="width:100%;max-width:700px;flex-wrap:wrap">
+          <button class="tab-btn tt-tab-btn active" id="tab-class-btn" onclick="switchTimetableTab('class')">📚
+            Class-wise</button>
+          <button class="tab-btn tt-tab-btn" id="tab-faculty-btn" onclick="switchTimetableTab('faculty')">👤
+            Faculty-wise</button>
+          <button class="tab-btn tt-tab-btn" id="tab-room-btn" onclick="switchTimetableTab('room')">🏛️
+            Room-wise</button>
+          <button class="tab-btn tt-tab-btn" id="tab-heatmap-btn" onclick="switchTimetableTab('heatmap')">🔥
+            Heatmap</button>
+          <button class="tab-btn tt-tab-btn" id="tab-conflict-btn" onclick="switchTimetableTab('conflict')">⚠️ Conflict
+            Report</button>
+        </div>
+
+        <div class="tab-panel tt-tab-panel active card" id="tab-class-panel" style="padding:20px"></div>
+        <div class="tab-panel tt-tab-panel card" id="tab-faculty-panel" style="padding:20px"></div>
+        <div class="tab-panel tt-tab-panel card" id="tab-room-panel" style="padding:20px"></div>
+        <div class="tab-panel tt-tab-panel card" id="tab-heatmap-panel" style="padding:20px"></div>
+        <div class="tab-panel tt-tab-panel card" id="tab-conflict-panel" style="padding:20px"></div>
+      </div>
+    </section>
+
+    <!-- ───────────────────── LOGS ─────────────────────────── -->
+    <section class="page" id="page-logs">
+      <div class="flex items-center justify-between mb-20">
+        <h2 style="font-size:20px;font-weight:700">Generation Logs</h2>
+        <button class="btn btn-danger btn-sm" onclick="clearLogs()">🗑️ Clear All Logs</button>
+      </div>
+      <div class="card">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Timestamp</th>
+                <th>Exec Time</th>
+                <th>Score</th>
+                <th>Slots</th>
+                <th>Violations</th>
+                <th>Unplaced</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="logs-tbody">
+              <tr>
+                <td colspan="9" class="empty-msg">No logs yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main><!-- /main-content -->
+
+  <!-- ══════════════════════════════════════════ MODALS ═══ -->
+
+  <!-- FACULTY MODAL -->
+  <div class="modal-overlay" id="faculty-modal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3 id="faculty-modal-title">Add Faculty</h3>
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('faculty-modal')">✕</button>
+      </div>
       <div class="form-grid">
         <div class="form-grid form-grid-2">
           <div class="form-group">
-            <label>Working Days per Week</label>
-            <select class="form-control" id="set-workingDays">
-              <option value="5">5 days (Mon–Fri)</option>
-              <option value="6">6 days (Mon–Sat)</option>
-            </select>
+            <label>Faculty ID *</label>
+            <input class="form-control" id="fm-id" placeholder="e.g. F001" />
           </div>
           <div class="form-group">
-            <label>Periods per Day</label>
-            <select class="form-control" id="set-periodsPerDay">
-              <option value="7">7 periods</option>
-              <option value="8">8 periods</option>
-            </select>
+            <label>Full Name *</label>
+            <input class="form-control" id="fm-name" placeholder="Dr. John Smith" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Subject Codes (comma-separated)</label>
+          <input class="form-control" id="fm-subs" placeholder="CS101, CS102, CSL101" />
+          <span class="text-xs text-muted mt-4">Must match existing subject codes exactly</span>
+        </div>
+        <div class="form-group">
+          <label>Availability Matrix (click to toggle ✓=Available, ✗=Unavailable)</label>
+          <div class="avail-matrix" id="fm-avail"></div>
+        </div>
+        <input type="hidden" id="fm-edit-id" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('faculty-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveFaculty()">💾 Save Faculty</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FACULTY CSV MODAL -->
+  <div class="modal-overlay" id="faculty-csv-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Import Faculty CSV</h3>
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('faculty-csv-modal')">✕</button>
+      </div>
+      <div class="alert alert-info mb-16">
+        <span>ℹ️</span>
+        <div><strong>Expected columns:</strong><br />ID, Name, Subjects (semicolon-separated)<br />
+          Example row: <code>F001,Dr. Smith,CS101;CS102</code></div>
+      </div>
+      <div class="upload-zone" id="faculty-drop">
+        <div class="upload-icon">📂</div>
+        <p>Drag & drop CSV file here</p>
+        <p class="upload-hint">or click to browse</p>
+        <input type="file" id="faculty-csv-input" accept=".csv" style="display:none" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('faculty-csv-modal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBJECT MODAL -->
+  <div class="modal-overlay" id="subject-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="subject-modal-title">Add Subject</h3>
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('subject-modal')">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-grid form-grid-2">
+          <div class="form-group">
+            <label>Subject Code *</label>
+            <input class="form-control" id="sm-code" placeholder="e.g. CS101" />
+          </div>
+          <div class="form-group">
+            <label>Subject Name *</label>
+            <input class="form-control" id="sm-name" placeholder="e.g. Data Structures" />
           </div>
         </div>
         <div class="form-grid form-grid-2">
           <div class="form-group">
-            <label>Period Duration (minutes)</label>
-            <select class="form-control" id="set-periodDuration">
-              <option value="45">45 min</option>
-              <option value="50">50 min</option>
-              <option value="60">60 min</option>
+            <label>Type</label>
+            <select class="form-control" id="sm-type">
+              <option value="Theory">Theory</option>
+              <option value="Lab">Lab</option>
             </select>
           </div>
           <div class="form-group">
-            <label>Lab Consecutive Periods</label>
-            <select class="form-control" id="set-labConsecutive">
-              <option value="2">2 periods</option>
-              <option value="3">3 periods</option>
-            </select>
+            <label>Weekly Hours</label>
+            <input class="form-control" id="sm-hours" type="number" min="1" max="10" value="3" />
+          </div>
+        </div>
+        <input type="hidden" id="sm-edit-code" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('subject-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSubject()">💾 Save Subject</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBJECTS CSV MODAL -->
+  <div class="modal-overlay" id="subjects-csv-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Import Subjects CSV</h3>
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('subjects-csv-modal')">✕</button>
+      </div>
+      <div class="alert alert-info mb-16">
+        <span>ℹ️</span>
+        <div><strong>Expected columns:</strong> Code, Name, Type (Lab/Theory), WeeklyHours<br />
+          Example: <code>CS101,Data Structures,Theory,4</code></div>
+      </div>
+      <div class="upload-zone" id="subjects-drop">
+        <div class="upload-icon">📂</div>
+        <p>Drag & drop CSV file here</p>
+        <p class="upload-hint">or click to browse</p>
+        <input type="file" id="subjects-csv-input" accept=".csv" style="display:none" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('subjects-csv-modal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROOM MODAL -->
+  <div class="modal-overlay" id="room-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="room-modal-title">Add Room</h3>
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('room-modal')">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-grid form-grid-2">
+          <div class="form-group">
+            <label>Room ID *</label>
+            <input class="form-control" id="rm-id" placeholder="e.g. R101" />
+          </div>
+          <div class="form-group">
+            <label>Room Name *</label>
+            <input class="form-control" id="rm-name" placeholder="e.g. Room 101" />
           </div>
         </div>
         <div class="form-grid form-grid-2">
           <div class="form-group">
-            <label>Break After Period #</label>
-            <select class="form-control" id="set-breakAfter">
-              <option value="0">No break</option>
-              <option value="2">After Period 2</option>
-              <option value="3">After Period 3</option>
+            <label>Type</label>
+            <select class="form-control" id="rm-type">
+              <option value="Theory">Theory Classroom</option>
+              <option value="Lab">Laboratory</option>
             </select>
           </div>
           <div class="form-group">
-            <label>Lunch After Period #</label>
-            <select class="form-control" id="set-lunchAfter">
-              <option value="0">No lunch</option>
-              <option value="4">After Period 4</option>
-              <option value="5">After Period 5</option>
-            </select>
+            <label>Capacity</label>
+            <input class="form-control" id="rm-cap" type="number" min="1" max="500" value="60" />
           </div>
         </div>
-
-        <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:12px;font-size:12px;color:var(--text-secondary)">
-          <strong style="color:var(--accent)">📌 Note:</strong> Break and Lunch slots are excluded from teaching periods.
-          Labs require consecutive available periods (not split by breaks).
-        </div>
-
-        <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+        <input type="hidden" id="rm-edit-id" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('room-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveRoom()">💾 Save Room</button>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- ───────────────────── GENERATE ────────────────────── -->
-  <section class="page" id="page-generate">
-    <h2 style="font-size:20px;font-weight:700;margin-bottom:20px">⚡ Generate Timetable</h2>
-
-    <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start" class="gen-layout">
-      <!-- Left: controls + log -->
-      <div>
-        <div class="card mb-16">
-          <div class="card-header"><h3>⚙️ Generation Controls</h3></div>
-          <div class="gen-btn-wrap">
-            <button class="btn btn-primary" id="gen-btn" onclick="runGeneration()">
-              ⚡ Generate Timetable
-            </button>
-            <div id="gen-status"><span class="badge" style="background:var(--bg-card);color:var(--text-muted)">— Ready —</span></div>
-          </div>
-          <div class="progress-wrap mt-16">
-            <div class="progress-label">
-              <span>Generation Progress</span>
-              <span id="progress-pct">0%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" id="progress-fill" style="width:0%"></div>
-            </div>
-          </div>
-          <div class="generation-log mt-12" id="gen-log">
-            <div class="log-line"><span class="log-time">[system]</span><span class="log-info">Ready to generate. Click the button above to start.</span></div>
-          </div>
-        </div>
+  <!-- ROOMS CSV MODAL -->
+  <div class="modal-overlay" id="rooms-csv-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Import Rooms CSV</h3>
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('rooms-csv-modal')">✕</button>
       </div>
+      <div class="alert alert-info mb-16">
+        <span>ℹ️</span>
+        <div><strong>Expected columns:</strong> ID, Name, Type (Lab/Theory), Capacity<br />
+          Example: <code>R101,Room 101,Theory,60</code></div>
+      </div>
+      <div class="upload-zone" id="rooms-drop">
+        <div class="upload-icon">📂</div>
+        <p>Drag & drop CSV file here</p>
+        <p class="upload-hint">or click to browse</p>
+        <input type="file" id="rooms-csv-input" accept=".csv" style="display:none" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('rooms-csv-modal')">Close</button>
+      </div>
+    </div>
+  </div>
 
-      <!-- Right: summary -->
-      <div>
-        <div class="card">
-          <div class="card-header"><h3>📊 Generation Summary</h3></div>
-          <div id="gen-summary" style="color:var(--text-muted);font-size:13px">
-            Run a generation to see results here.
+  <!-- CLASS MODAL -->
+  <div class="modal-overlay" id="class-modal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3 id="class-modal-title">Add Class</h3>
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('class-modal')">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-grid form-grid-2">
+          <div class="form-group">
+            <label>Class ID *</label>
+            <input class="form-control" id="cm-id" placeholder="e.g. CLS_A" />
           </div>
-        </div>
-
-        <div class="card mt-16">
-          <div class="card-header"><h3>📥 Export</h3></div>
-          <div class="flex gap-8" style="flex-direction:column">
-            <button class="btn btn-success" onclick="exportTimetableCSV()">📄 Download CSV</button>
-            <button class="btn btn-secondary" onclick="exportTimetablePDF()">📑 Download PDF</button>
+          <div class="form-group">
+            <label>Section Name *</label>
+            <input class="form-control" id="cm-section" placeholder="e.g. CS-A (3rd Sem)" />
           </div>
         </div>
-
-        <div class="card mt-16" style="background:rgba(99,102,241,0.06);border-color:rgba(99,102,241,0.2)">
-          <div class="card-header"><h3>🧠 Algorithm Info</h3></div>
-          <div style="font-size:12px;color:var(--text-secondary);line-height:1.8">
-            <div>• <strong>Method:</strong> Backtracking + MRV heuristics</div>
-            <div>• <strong>Order:</strong> Labs → High-hours → Theory</div>
-            <div>• <strong>Constraint Propagation:</strong> Forward checking</div>
-            <div>• <strong>Hard Constraints:</strong> Zero violation enforced</div>
-            <div>• <strong>Soft Scoring:</strong> 0–100 quality metric</div>
+        <div class="form-group">
+          <label>Student Strength</label>
+          <input class="form-control" id="cm-strength" type="number" min="1" max="500" value="50" />
+        </div>
+        <div class="form-group">
+          <label>Assign Subjects</label>
+          <div id="cm-subjects"
+            style="padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto">
+            <span class="text-muted text-sm">Add subjects first</span>
           </div>
         </div>
+        <input type="hidden" id="cm-edit-id" />
       </div>
-    </div>
-
-    <!-- Results section -->
-    <div id="results-section" style="margin-top:24px">
-      <hr class="section-divider" />
-      <h3 style="font-size:16px;font-weight:700;margin-bottom:16px">📅 Timetable Results</h3>
-
-      <!-- Tabs -->
-      <div class="tab-bar" style="width:100%;max-width:700px;flex-wrap:wrap">
-        <button class="tab-btn tt-tab-btn active" id="tab-class-btn"   onclick="switchTimetableTab('class')">📚 Class-wise</button>
-        <button class="tab-btn tt-tab-btn"        id="tab-faculty-btn" onclick="switchTimetableTab('faculty')">👤 Faculty-wise</button>
-        <button class="tab-btn tt-tab-btn"        id="tab-room-btn"    onclick="switchTimetableTab('room')">🏛️ Room-wise</button>
-        <button class="tab-btn tt-tab-btn"        id="tab-heatmap-btn" onclick="switchTimetableTab('heatmap')">🔥 Heatmap</button>
-        <button class="tab-btn tt-tab-btn"        id="tab-conflict-btn"onclick="switchTimetableTab('conflict')">⚠️ Conflict Report</button>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('class-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveClass()">💾 Save Class</button>
       </div>
-
-      <div class="tab-panel tt-tab-panel active card" id="tab-class-panel"   style="padding:20px"></div>
-      <div class="tab-panel tt-tab-panel card"        id="tab-faculty-panel" style="padding:20px"></div>
-      <div class="tab-panel tt-tab-panel card"        id="tab-room-panel"    style="padding:20px"></div>
-      <div class="tab-panel tt-tab-panel card"        id="tab-heatmap-panel" style="padding:20px"></div>
-      <div class="tab-panel tt-tab-panel card"        id="tab-conflict-panel"style="padding:20px"></div>
-    </div>
-  </section>
-
-  <!-- ───────────────────── LOGS ─────────────────────────── -->
-  <section class="page" id="page-logs">
-    <div class="flex items-center justify-between mb-20">
-      <h2 style="font-size:20px;font-weight:700">Generation Logs</h2>
-      <button class="btn btn-danger btn-sm" onclick="clearLogs()">🗑️ Clear All Logs</button>
-    </div>
-    <div class="card">
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead><tr>
-            <th>ID</th><th>Timestamp</th><th>Exec Time</th><th>Score</th><th>Slots</th><th>Violations</th><th>Status</th><th>Action</th>
-          </tr></thead>
-          <tbody id="logs-tbody">
-            <tr><td colspan="8" class="empty-msg">No logs yet</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-</main><!-- /main-content -->
-
-<!-- ══════════════════════════════════════════ MODALS ═══ -->
-
-<!-- FACULTY MODAL -->
-<div class="modal-overlay" id="faculty-modal">
-  <div class="modal modal-lg">
-    <div class="modal-header">
-      <h3 id="faculty-modal-title">Add Faculty</h3>
-      <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('faculty-modal')">✕</button>
-    </div>
-    <div class="form-grid">
-      <div class="form-grid form-grid-2">
-        <div class="form-group">
-          <label>Faculty ID *</label>
-          <input class="form-control" id="fm-id" placeholder="e.g. F001" />
-        </div>
-        <div class="form-group">
-          <label>Full Name *</label>
-          <input class="form-control" id="fm-name" placeholder="Dr. John Smith" />
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Subject Codes (comma-separated)</label>
-        <input class="form-control" id="fm-subs" placeholder="CS101, CS102, CSL101" />
-        <span class="text-xs text-muted mt-4">Must match existing subject codes exactly</span>
-      </div>
-      <div class="form-group">
-        <label>Availability Matrix (click to toggle ✓=Available, ✗=Unavailable)</label>
-        <div class="avail-matrix" id="fm-avail"></div>
-      </div>
-      <input type="hidden" id="fm-edit-id" />
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('faculty-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveFaculty()">💾 Save Faculty</button>
     </div>
   </div>
-</div>
 
-<!-- FACULTY CSV MODAL -->
-<div class="modal-overlay" id="faculty-csv-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Import Faculty CSV</h3>
-      <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('faculty-csv-modal')">✕</button>
-    </div>
-    <div class="alert alert-info mb-16">
-      <span>ℹ️</span>
-      <div><strong>Expected columns:</strong><br/>ID, Name, Subjects (semicolon-separated)<br/>
-      Example row: <code>F001,Dr. Smith,CS101;CS102</code></div>
-    </div>
-    <div class="upload-zone" id="faculty-drop">
-      <div class="upload-icon">📂</div>
-      <p>Drag & drop CSV file here</p>
-      <p class="upload-hint">or click to browse</p>
-      <input type="file" id="faculty-csv-input" accept=".csv" style="display:none" />
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('faculty-csv-modal')">Close</button>
+  <!-- CLASSES CSV MODAL -->
+  <div class="modal-overlay" id="classes-csv-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Import Classes CSV</h3>
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('classes-csv-modal')">✕</button>
+      </div>
+      <div class="alert alert-info mb-16">
+        <span>ℹ️</span>
+        <div><strong>Expected columns:</strong> ID, Section, Strength, Subjects (semicolon-separated)<br />
+          Example: <code>CLS_A,CS-A (3rd Sem),55,CS101;CS102;CSL101</code></div>
+      </div>
+      <div class="upload-zone" id="classes-drop">
+        <div class="upload-icon">📂</div>
+        <p>Drag & drop CSV file here</p>
+        <p class="upload-hint">or click to browse</p>
+        <input type="file" id="classes-csv-input" accept=".csv" style="display:none" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('classes-csv-modal')">Close</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- SUBJECT MODAL -->
-<div class="modal-overlay" id="subject-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="subject-modal-title">Add Subject</h3>
-      <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('subject-modal')">✕</button>
-    </div>
-    <div class="form-grid">
-      <div class="form-grid form-grid-2">
-        <div class="form-group">
-          <label>Subject Code *</label>
-          <input class="form-control" id="sm-code" placeholder="e.g. CS101" />
-        </div>
-        <div class="form-group">
-          <label>Subject Name *</label>
-          <input class="form-control" id="sm-name" placeholder="e.g. Data Structures" />
-        </div>
+  <!-- CONFIRM MODAL -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal" style="max-width:420px">
+      <div class="modal-header">
+        <h3 id="confirm-title">Confirm</h3>
       </div>
-      <div class="form-grid form-grid-2">
-        <div class="form-group">
-          <label>Type</label>
-          <select class="form-control" id="sm-type">
-            <option value="Theory">Theory</option>
-            <option value="Lab">Lab</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Weekly Hours</label>
-          <input class="form-control" id="sm-hours" type="number" min="1" max="10" value="3" />
-        </div>
+      <p id="confirm-message" style="font-size:14px;color:var(--text-secondary);margin-bottom:4px"></p>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="confirm-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="confirm-ok-btn">OK</button>
       </div>
-      <input type="hidden" id="sm-edit-code" />
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('subject-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveSubject()">💾 Save Subject</button>
     </div>
   </div>
-</div>
 
-<!-- SUBJECTS CSV MODAL -->
-<div class="modal-overlay" id="subjects-csv-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Import Subjects CSV</h3>
-      <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('subjects-csv-modal')">✕</button>
-    </div>
-    <div class="alert alert-info mb-16">
-      <span>ℹ️</span>
-      <div><strong>Expected columns:</strong> Code, Name, Type (Lab/Theory), WeeklyHours<br/>
-      Example: <code>CS101,Data Structures,Theory,4</code></div>
-    </div>
-    <div class="upload-zone" id="subjects-drop">
-      <div class="upload-icon">📂</div>
-      <p>Drag & drop CSV file here</p>
-      <p class="upload-hint">or click to browse</p>
-      <input type="file" id="subjects-csv-input" accept=".csv" style="display:none" />
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('subjects-csv-modal')">Close</button>
-    </div>
-  </div>
-</div>
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
 
-<!-- ROOM MODAL -->
-<div class="modal-overlay" id="room-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="room-modal-title">Add Room</h3>
-      <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('room-modal')">✕</button>
-    </div>
-    <div class="form-grid">
-      <div class="form-grid form-grid-2">
-        <div class="form-group">
-          <label>Room ID *</label>
-          <input class="form-control" id="rm-id" placeholder="e.g. R101" />
-        </div>
-        <div class="form-group">
-          <label>Room Name *</label>
-          <input class="form-control" id="rm-name" placeholder="e.g. Room 101" />
-        </div>
-      </div>
-      <div class="form-grid form-grid-2">
-        <div class="form-group">
-          <label>Type</label>
-          <select class="form-control" id="rm-type">
-            <option value="Theory">Theory Classroom</option>
-            <option value="Lab">Laboratory</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Capacity</label>
-          <input class="form-control" id="rm-cap" type="number" min="1" max="500" value="60" />
-        </div>
-      </div>
-      <input type="hidden" id="rm-edit-id" />
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('room-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveRoom()">💾 Save Room</button>
-    </div>
-  </div>
-</div>
+  <!-- SCRIPTS -->
+  <script src="js/db.js"></script>
+  <script src="js/scheduler.js"></script>
+  <script src="js/exporter.js"></script>
+  <script src="js/app.js"></script>
 
-<!-- ROOMS CSV MODAL -->
-<div class="modal-overlay" id="rooms-csv-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Import Rooms CSV</h3>
-      <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('rooms-csv-modal')">✕</button>
-    </div>
-    <div class="alert alert-info mb-16">
-      <span>ℹ️</span>
-      <div><strong>Expected columns:</strong> ID, Name, Type (Lab/Theory), Capacity<br/>
-      Example: <code>R101,Room 101,Theory,60</code></div>
-    </div>
-    <div class="upload-zone" id="rooms-drop">
-      <div class="upload-icon">📂</div>
-      <p>Drag & drop CSV file here</p>
-      <p class="upload-hint">or click to browse</p>
-      <input type="file" id="rooms-csv-input" accept=".csv" style="display:none" />
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('rooms-csv-modal')">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- CLASS MODAL -->
-<div class="modal-overlay" id="class-modal">
-  <div class="modal modal-lg">
-    <div class="modal-header">
-      <h3 id="class-modal-title">Add Class</h3>
-      <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('class-modal')">✕</button>
-    </div>
-    <div class="form-grid">
-      <div class="form-grid form-grid-2">
-        <div class="form-group">
-          <label>Class ID *</label>
-          <input class="form-control" id="cm-id" placeholder="e.g. CLS_A" />
-        </div>
-        <div class="form-group">
-          <label>Section Name *</label>
-          <input class="form-control" id="cm-section" placeholder="e.g. CS-A (3rd Sem)" />
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Student Strength</label>
-        <input class="form-control" id="cm-strength" type="number" min="1" max="500" value="50" />
-      </div>
-      <div class="form-group">
-        <label>Assign Subjects</label>
-        <div id="cm-subjects" style="padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto">
-          <span class="text-muted text-sm">Add subjects first</span>
-        </div>
-      </div>
-      <input type="hidden" id="cm-edit-id" />
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('class-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveClass()">💾 Save Class</button>
-    </div>
-  </div>
-</div>
-
-<!-- CLASSES CSV MODAL -->
-<div class="modal-overlay" id="classes-csv-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Import Classes CSV</h3>
-      <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('classes-csv-modal')">✕</button>
-    </div>
-    <div class="alert alert-info mb-16">
-      <span>ℹ️</span>
-      <div><strong>Expected columns:</strong> ID, Section, Strength, Subjects (semicolon-separated)<br/>
-      Example: <code>CLS_A,CS-A (3rd Sem),55,CS101;CS102;CSL101</code></div>
-    </div>
-    <div class="upload-zone" id="classes-drop">
-      <div class="upload-icon">📂</div>
-      <p>Drag & drop CSV file here</p>
-      <p class="upload-hint">or click to browse</p>
-      <input type="file" id="classes-csv-input" accept=".csv" style="display:none" />
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('classes-csv-modal')">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
-
-<!-- SCRIPTS -->
-<script src="js/db.js"></script>
-<script src="js/scheduler.js"></script>
-<script src="js/exporter.js"></script>
-<script src="js/app.js"></script>
-
-<style>
-  /* Additional generation layout responsive fix */
-  @media(max-width:1100px) {
-    .gen-layout { grid-template-columns:1fr !important; }
-  }
-</style>
+  <style>
+    /* Additional generation layout responsive fix */
+    @media(max-width:1100px) {
+      .gen-layout {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
 
 </body>
+
 </html>

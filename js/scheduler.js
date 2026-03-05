@@ -108,11 +108,18 @@ const Scheduler = (() => {
         const hardViolations = verifyHardConstraints(result, faculty, rooms);
         hardViolations.forEach(v => conflicts.push(v));
 
+        // Count unplaced slots (NO_RESOURCE) separately — these are soft failures
+        const noResourceCount = conflicts.filter(c => c.type === 'NO_RESOURCE').length;
+        if (noResourceCount > 0) {
+            onLog('warn', `${noResourceCount} subject slot(s) could not be placed (no suitable faculty/room found)`);
+        }
+
         // ─── Soft constraint scoring ────────────────────────────────
         const softScore = calcSoftScore(result, faculty, DAYS, teachingPeriods, LAB_CON);
         onLog('ok', `Soft constraint score: ${softScore}/100`);
 
         const execTime = Math.round(performance.now() - startTime);
+        // Valid = no hard double-booking violations (NO_RESOURCE is a warning, not hard violation)
         const valid = hardViolations.length === 0;
 
         onLog(valid ? 'ok' : 'err',
@@ -122,7 +129,7 @@ const Scheduler = (() => {
         onProgress(100);
 
         // ─── Persist ────────────────────────────────────────────────
-        await DB.put('timetable', { generationId: genId, slots: result, conflicts, softScore, valid });
+        await DB.put('timetable', { generationId: genId, slots: result, conflicts, softScore, valid, hardViolationCount: hardViolations.length, noResourceCount });
         await DB.put('genLog', {
             id: genId,
             timestamp: new Date().toISOString(),
@@ -130,8 +137,9 @@ const Scheduler = (() => {
             softScore,
             valid,
             totalSlots: result.length,
-            conflicts: conflicts.length,
-            status: valid ? 'VALID' : 'INVALID'
+            conflicts: hardViolations.length,
+            unplaced: noResourceCount,
+            status: valid ? (noResourceCount > 0 ? 'PARTIAL' : 'VALID') : 'INVALID'
         });
 
         return {
@@ -187,9 +195,10 @@ const Scheduler = (() => {
         );
 
         // Candidate rooms for this subject
+        // Note: Labs are conducted in sub-groups, so capacity check is skipped for labs
         const candRooms = rooms.filter(r =>
             r.type === slot.subject.type &&
-            (!cls.strength || r.capacity >= (cls.strength || 0))
+            (slot.type === 'lab' || !cls.strength || r.capacity >= (cls.strength || 0))
         );
 
         if (candFaculty.length === 0 || candRooms.length === 0) {
